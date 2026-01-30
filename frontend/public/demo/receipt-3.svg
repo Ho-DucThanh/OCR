@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="1200" viewBox="0 0 800 1200">
+  <rect width="800" height="1200" fill="#ffffff"/>
+  <rect x="80" y="80" width="640" height="1040" rx="18" fill="#f0fdf4" stroke="#86efac"/>
+  <text x="400" y="170" text-anchor="middle" font-family="Arial" font-size="34" fill="#166534">HÓA ĐƠN (DEMO)</text>
+  <text x="400" y="220" text-anchor="middle" font-family="Arial" font-size="18" fill="#15803d">Cửa hàng: Circle K</text>
+  <text x="400" y="255" text-anchor="middle" font-family="Arial" font-size="18" fill="#15803d">Ngày: 20/01/2026</text>
+  <line x1="130" y1="300" x2="670" y2="300" stroke="#86efac"/>
+
+  <g font-family="Arial" font-size="18" fill="#166534">
+    <text x="150" y="360">Snack</text><text x="650" y="360" text-anchor="end">25,000</text>
+    <text x="150" y="400">Trà chanh</text><text x="650" y="400" text-anchor="end">20,000</text>
+    <text x="150" y="440">Kẹo</text><text x="650" y="440" text-anchor="end">15,000</text>
+  </g>
+
+  <line x1="130" y1="520" x2="670" y2="520" stroke="#86efac"/>
+  <text x="150" y="580" font-family="Arial" font-size="20" fill="#166534">Tổng thanh toán</text>
+  <text x="650" y="580" text-anchor="end" font-family="Arial" font-size="22" fill="#166534">60,000</text>
+
+  <text x="400" y="1040" text-anchor="middle" font-family="Arial" font-size="14" fill="#22c55e">Ảnh mẫu để demo UI</text>
+</svg>
