@@ -3,9 +3,11 @@ $ErrorActionPreference = "Stop"
 # Ensure relative paths are resolved from this script's folder.
 Set-Location $PSScriptRoot
 
-if (!(Test-Path ".venv")) {
-  # SQLAlchemy 2.0.x is not yet compatible with Python 3.14.
-  # Prefer Python 3.12 if available.
+$repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
+$venvPython = Join-Path $repoRoot ".venv\Scripts\python.exe"
+
+if (!(Test-Path $venvPython)) {
+  Set-Location $repoRoot
   try {
     py -3.12 -m venv .venv
   } catch {
@@ -13,13 +15,13 @@ if (!(Test-Path ".venv")) {
   }
 }
 
-& "$PSScriptRoot\.venv\Scripts\Activate.ps1"
-python -m pip install --upgrade pip
-pip install -r requirements.txt
+Set-Location $repoRoot
+& $venvPython -m pip install -r (Join-Path $PSScriptRoot "requirements.txt")
 
 # Load .env if exists (simple parser)
-if (Test-Path "..\.env") {
-  Get-Content "..\.env" | ForEach-Object {
+$envPath = Join-Path $repoRoot ".env"
+if (Test-Path $envPath) {
+  Get-Content $envPath | ForEach-Object {
     if ($_ -match "^\s*#" -or $_ -match "^\s*$") { return }
     $parts = $_.Split("=", 2)
     if ($parts.Length -eq 2) {
@@ -28,4 +30,13 @@ if (Test-Path "..\.env") {
   }
 }
 
-uvicorn app.main:app --reload --host 0.0.0.0 --port 8001
+# Free port 8001 if something is already listening (common after a previous run)
+$conns = Get-NetTCPConnection -LocalPort 8001 -State Listen -ErrorAction SilentlyContinue
+if ($conns) {
+  $pids = $conns | Select-Object -ExpandProperty OwningProcess -Unique
+  foreach ($procId in $pids) {
+    Stop-Process -Id $procId -Force -ErrorAction SilentlyContinue
+  }
+}
+
+& $venvPython -m uvicorn backend.app.main:app --host 127.0.0.1 --port 8001

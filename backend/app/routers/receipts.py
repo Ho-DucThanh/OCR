@@ -20,7 +20,7 @@ from ..schemas import (
     ReceiptOut,
 )
 from ..services.category import categorize
-from ..services.extract import extract_fields
+from ..services.extract import clean_ocr_text, extract_fields, extract_line_items
 from ..services.excel import append_receipt_to_excel
 from ..services.ocr import ensure_upload_dir, run_tesseract
 
@@ -35,13 +35,45 @@ def export_excel(db: Session = Depends(get_db)):
     from openpyxl import Workbook
 
     wb = Workbook()
-    ws = wb.active
-    ws.title = "receipts"
-    ws.append(["id", "store_name", "date", "total_amount", "category", "image_path", "created_at"])
 
-    receipts = db.execute(select(Receipt).order_by(desc(Receipt.created_at))).scalars().all()
+    ws_receipts = wb.active
+    ws_receipts.title = "receipts"
+    ws_receipts.append(
+        [
+            "id",
+            "store_name",
+            "date",
+            "total_amount",
+            "category",
+            "image_path",
+            "created_at",
+        ]
+    )
+
+    ws_items = wb.create_sheet(title="items")
+    ws_items.append(
+        [
+            "receipt_id",
+            "item_name",
+            "quantity",
+            "unit_price",
+            "total_price",
+            "item_id",
+        ]
+    )
+
+    receipts = (
+        db.execute(
+            select(Receipt)
+            .options(selectinload(Receipt.items))
+            .order_by(desc(Receipt.created_at))
+        )
+        .scalars()
+        .all()
+    )
+
     for r in receipts:
-        ws.append(
+        ws_receipts.append(
             [
                 r.id,
                 r.store_name,
@@ -52,6 +84,17 @@ def export_excel(db: Session = Depends(get_db)):
                 r.created_at.isoformat() if r.created_at else None,
             ]
         )
+        for it in (r.items or []):
+            ws_items.append(
+                [
+                    r.id,
+                    it.item_name,
+                    it.quantity,
+                    it.unit_price,
+                    it.total_price,
+                    it.id,
+                ]
+            )
 
     export_path.parent.mkdir(parents=True, exist_ok=True)
     wb.save(export_path)
@@ -186,6 +229,8 @@ async def upload_receipt(file: UploadFile = File(...), db: Session = Depends(get
             ),
         )
 
+    raw_text = clean_ocr_text(raw_text)
+
     fields = extract_fields(raw_text)
     category = categorize(fields.store_name)
 
@@ -205,6 +250,38 @@ async def upload_receipt(file: UploadFile = File(...), db: Session = Depends(get
     db.add(receipt)
     db.commit()
     db.refresh(receipt)
+
+    # Extract and persist line items (best-effort).
+    try:
+        extracted_items = extract_line_items(raw_text)
+        if extracted_items:
+            db.add_all(
+                [
+                    ReceiptItem(
+                        receipt_id=receipt.id,
+                        item_name=it.item_name,
+                        quantity=it.quantity,
+                        unit_price=it.unit_price,
+                        total_price=it.total_price,
+                    )
+                    for it in extracted_items
+                ]
+            )
+            db.commit()
+    except Exception:
+        # Don't fail upload if item extraction is imperfect.
+        pass
+
+    # Return with items preloaded for the detail page.
+    receipt = (
+        db.execute(
+            select(Receipt)
+            .options(selectinload(Receipt.items))
+            .where(Receipt.id == receipt.id)
+        )
+        .scalars()
+        .first()
+    )
 
     # Best-effort append to Excel (local storage)
     try:

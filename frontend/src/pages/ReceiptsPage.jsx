@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { apiGet } from "../api";
+import { apiGet, apiUrl, isDemoMode } from "../api";
 
 function formatMoney(v) {
   if (v === null || v === undefined) return "";
@@ -16,9 +16,15 @@ export default function ReceiptsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
+  const demoMode = isDemoMode();
+
+  function handleExportExcel() {
+    if (demoMode) return;
+    window.location.assign(apiUrl("/api/receipts/export"));
+  }
+
   useEffect(() => {
     let mounted = true;
-    setLoading(true);
     apiGet("/api/receipts")
       .then((data) => {
         if (!mounted) return;
@@ -72,6 +78,17 @@ export default function ReceiptsPage() {
           >
             Xem thống kê
           </Link>
+          <button
+            type="button"
+            onClick={handleExportExcel}
+            disabled={demoMode}
+            className="inline-flex items-center justify-center rounded-md border bg-white px-4 py-2 text-sm font-medium text-slate-900 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+            title={
+              demoMode ? "Demo mode: không hỗ trợ xuất Excel" : "Xuất Excel"
+            }
+          >
+            Xuất Excel
+          </button>
           <Link
             to="/upload"
             className="inline-flex items-center justify-center rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800"

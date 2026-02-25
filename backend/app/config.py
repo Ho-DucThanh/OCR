@@ -26,6 +26,16 @@ class Settings(BaseSettings):
 
     tesseract_cmd: str | None = None
 
+    # Tesseract OCR language (e.g. "vie" or "eng")
+    ocr_lang: str = "vie"
+
+    # Optional: fallback OCR language if the primary language is missing (default: eng)
+    ocr_fallback_lang: str | None = "eng"
+
+    # Optional: path to tessdata directory (where *.traineddata lives)
+    # Example: C:\Program Files\Tesseract-OCR\tessdata
+    tessdata_prefix: str | None = None
+
     def cors_origins_list(self) -> list[str]:
         if not self.cors_origins:
             return []

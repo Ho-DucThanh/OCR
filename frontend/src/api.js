@@ -23,6 +23,14 @@ function withBase(path) {
   return `${API_BASE}${path}`;
 }
 
+export function apiUrl(path) {
+  return withBase(path);
+}
+
+export function isDemoMode() {
+  return DEMO_MODE;
+}
+
 function isReceiptsList(path) {
   return path === "/api/receipts";
 }
@@ -64,23 +72,12 @@ export async function apiGet(path) {
     throw new Error("Demo mode: endpoint not supported");
   }
 
-  try {
-    const res = await fetch(withBase(path), { headers: defaultHeaders });
-    if (!res.ok) {
-      const text = await res.text();
-      throw new Error(text || `HTTP ${res.status}`);
-    }
-    return await res.json();
-  } catch (e) {
-    // Friendly fallback so you can preview UI without backend.
-    if (isReceiptsList(path)) return demoListReceipts();
-    if (isReceiptDetail(path)) return demoGetReceipt(receiptIdFromPath(path));
-    if (isReceiptItems(path))
-      return demoListReceiptItems(receiptIdFromItemsPath(path));
-    if (isStatsSpendingByItem(path)) return demoSpendingByItem();
-    if (isStatsCategoryTotals(path)) return demoCategoryTotals();
-    throw e;
+  const res = await fetch(withBase(path), { headers: defaultHeaders });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(text || `HTTP ${res.status}`);
   }
+  return await res.json();
 }
 
 export async function apiPutJson(path, payload) {
